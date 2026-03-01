@@ -1058,9 +1058,16 @@
         overflow: auto;
       }
 
-      /* No chart panel on mobile */
+      /* Chart panel on mobile — hidden by default, shown via tab */
       #chart-panel {
-        display: none !important;
+        display: none;
+        position: absolute;
+        inset: 0;
+        z-index: 10;
+      }
+
+      #chart-panel.mob-active {
+        display: flex !important;
       }
 
       /* Show bottom nav */
@@ -1294,6 +1301,13 @@
         STOCKS
         <span class="bnav-badge" id="bnav-badge"></span>
       </button>
+      <button class="bnav-tab" id="bnav-chart" onclick="showTab('chart')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="18" height="18" rx="2" />
+          <polyline points="7 14 11 10 15 14 19 8" />
+        </svg>
+        CHARTS
+      </button>
       <button class="bnav-tab" id="bnav-detail" onclick="showTab('detail')">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
@@ -1335,7 +1349,7 @@
       document.getElementById("ic-sun").style.display = t === "dark" ? "block" : "none";
       if (!tr) requestAnimationFrame(() => { document.body.style.transition = ""; });
       // Reload chart with new theme if stock is active
-      if (activeSym && !isMobile()) loadChart(activeSym);
+      if (activeSym) loadChart(activeSym);
     }
     window.toggleTheme = () => applyTheme(theme === "dark" ? "light" : "dark");
 
@@ -1343,20 +1357,36 @@
     window.showTab = function (tab) {
       mobileTab = tab;
       const sidebar = document.getElementById("sidebar");
+      const chartPanel = document.getElementById("chart-panel");
       const btnList = document.getElementById("bnav-list");
+      const btnChart = document.getElementById("bnav-chart");
       const btnDet = document.getElementById("bnav-detail");
+
+      // Reset all
+      sidebar.classList.add("hidden");
+      chartPanel.classList.remove("mob-active");
+      btnList.classList.remove("active");
+      btnChart.classList.remove("active");
+      btnDet.classList.remove("active");
 
       if (tab === "list") {
         sidebar.classList.remove("hidden");
         document.getElementById("stocks-panel").style.display = "";
         document.getElementById("meta-panel").classList.remove("show");
         btnList.classList.add("active");
-        btnDet.classList.remove("active");
+      } else if (tab === "chart") {
+        chartPanel.classList.add("mob-active");
+        btnChart.classList.add("active");
+        // Load chart if stock is selected
+        if (activeSym) loadChart(activeSym);
       } else {
         sidebar.classList.remove("hidden");
         document.getElementById("stocks-panel").style.display = "none";
-        if (activeStock) document.getElementById("meta-panel").classList.add("show");
-        btnList.classList.remove("active");
+        if (activeStock) {
+          const mp = document.getElementById("meta-panel");
+          mp.classList.add("show");
+          mp.classList.remove("min"); // open expanded on mobile
+        }
         btnDet.classList.add("active");
       }
     };
@@ -1473,13 +1503,11 @@
       // Show metadata
       showMeta(s);
 
-      // Load chart (desktop only)
-      if (!isMobile()) {
-        loadChart(s.symbol);
-      }
+      // Load chart
+      loadChart(s.symbol);
 
-      // On mobile: switch to detail tab
-      if (isMobile()) showTab("detail");
+      // On mobile: switch to chart tab
+      if (isMobile()) showTab("chart");
     }
 
     // ─── Load Chart (Desktop) ─────────────────────
