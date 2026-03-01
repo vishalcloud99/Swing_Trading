@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
-<title>Scanner · NSE</title>
+<title>Swing Scanner · NSE</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Geist:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <style>
@@ -330,33 +330,7 @@ body{
 }
 .bnav-badge.show{display:block;}
 
-/* ═══════════════════════════════════════════
-   MODAL
-═══════════════════════════════════════════ */
-#modal-bg{
-  position:fixed;inset:0;background:rgba(0,0,0,.65);
-  backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;
-  z-index:999;opacity:0;pointer-events:none;transition:opacity .18s;padding:16px;
-}
-#modal-bg.show{opacity:1;pointer-events:all;}
-#modal{
-  background:var(--surface);border:1px solid var(--border2);
-  border-radius:12px;padding:22px;width:100%;max-width:340px;
-  box-shadow:var(--shadow-lg);
-  transform:translateY(10px) scale(.98);transition:transform .18s var(--ease);
-}
-#modal-bg.show #modal{transform:translateY(0) scale(1);}
-#modal h2{font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--accent);letter-spacing:.06em;margin-bottom:8px;}
-#modal p{font-size:11px;color:var(--text2);line-height:1.65;margin-bottom:10px;}
-.url-ex{background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:7px 9px;font-family:var(--font-mono);font-size:8px;color:var(--text2);margin-bottom:12px;line-height:1.7;word-break:break-all;}
-.url-ex em{color:var(--accent);font-style:normal;font-weight:700;}
-#modal-inp{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-family:var(--font-mono);font-size:13px;padding:9px 11px;outline:none;margin-bottom:11px;transition:border-color .12s;}
-#modal-inp:focus{border-color:var(--accent);}
-.modal-btns{display:flex;gap:6px;}
-#m-save{flex:1;background:var(--accent);color:#fff;border:none;border-radius:6px;padding:9px;font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.08em;cursor:pointer;transition:opacity .12s;}
-#m-save:hover{opacity:.85;}
-#m-skip{background:transparent;border:1px solid var(--border2);border-radius:6px;color:var(--text2);font-family:var(--font-mono);font-size:10px;padding:9px 13px;cursor:pointer;transition:all .12s;}
-#m-skip:hover{border-color:var(--text3);color:var(--text);}
+
 
 /* ═══════════════════════════════════════════
    TOAST
@@ -464,19 +438,6 @@ body{
 </head>
 <body>
 
-<!-- Modal -->
-<div id="modal-bg">
-  <div id="modal">
-    <h2>⚡ TRADINGVIEW CHART ID</h2>
-    <p>Enter once — saved to your browser. Clicking a stock opens your saved TradingView layout with all indicators.</p>
-    <div class="url-ex">tradingview.com/chart/<em>Hc9IypHJ</em>/?symbol=...<br>↑ copy the part between /chart/ and /?</div>
-    <input id="modal-inp" type="text" placeholder="e.g. Hc9IypHJ" autocomplete="off" spellcheck="false"/>
-    <div class="modal-btns">
-      <button id="m-save">SAVE &amp; CONTINUE</button>
-      <button id="m-skip">SKIP</button>
-    </div>
-  </div>
-</div>
 
 <!-- Toast -->
 <div id="toast"></div>
@@ -487,10 +448,7 @@ body{
   <div class="tb-sep"></div>
   <div id="tb-sym">NSE STOCK SCANNER</div>
   <div class="tb-actions">
-    <button class="text-btn" onclick="openModal()">
-      <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492M5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0"/><path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52z"/></svg>
-      <span>CHART ID</span>
-    </button>
+
     <button class="icon-btn" onclick="toggleTheme()" title="Toggle theme">
       <svg id="ic-moon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
       <svg id="ic-sun" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
@@ -618,12 +576,12 @@ body{
 // ══════════════════════════════════════════════
 //  ↓ PASTE YOUR APPS SCRIPT WEB APP URL HERE ↓
 // ══════════════════════════════════════════════
-const API = "https://script.google.com/macros/s/AKfycbyQKby96Ok1lnZHe-Rqj8ZEcApl_i54OXyBTQbnNfOLnBHBhNJ2RLCSpkh8Hpr8tzXUjA/exec";
+const API = "https://script.google.com/macros/s/AKfycbygJLxviT2FEJD6BacnJ8kaH6GpyWyTgHmV5HOC99HgR4-qWG4iamABfTbIrt7OiGzaZw/exec";
 
 // ─── State ───────────────────────────────────
 let stocks    = [];
 let activeSym = null;
-let chartId   = localStorage.getItem("tv_chart_id") || "";
+
 let theme     = localStorage.getItem("theme") || "dark";
 let mobileTab = "list"; // "list" | "detail"
 
@@ -633,9 +591,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initChips();
   initDate();
   document.getElementById("apply-btn").addEventListener("click", load);
-  document.getElementById("m-save").addEventListener("click", modalSave);
-  document.getElementById("m-skip").addEventListener("click", modalClose);
-  if (!chartId) showModal(); else load();
+  load();
 });
 
 // ─── Theme ───────────────────────────────────
@@ -772,10 +728,8 @@ function pick(s) {
   showHero(s);
   showDates(s);
 
-  const tvUrl = chartId
-    ? `https://www.tradingview.com/chart/${chartId}/?symbol=NSE%3A${s.symbol}&interval=D`
-    : `https://www.tradingview.com/chart/?symbol=NSE%3A${s.symbol}&interval=D`;
-  document.getElementById("open-tv-btn").href = tvUrl;
+  document.getElementById("open-tv-btn").href =
+    `https://www.tradingview.com/chart/?symbol=NSE%3A${s.symbol}&interval=D`;
 
   // On mobile: auto-switch to detail tab
   if (isMobile()) showTab("detail");
@@ -845,27 +799,6 @@ function setLoading(on) {
   else    { pi.classList.remove("run"); btn.disabled=false; btn.textContent="APPLY"; }
 }
 
-// ─── Modal ────────────────────────────────────
-function showModal() {
-  document.getElementById("modal-inp").value = chartId;
-  document.getElementById("modal-bg").classList.add("show");
-}
-window.openModal = showModal;
-function modalClose() {
-  document.getElementById("modal-bg").classList.remove("show");
-  if (!stocks.length) load();
-}
-function modalSave() {
-  const v = document.getElementById("modal-inp").value.trim();
-  if (v) {
-    chartId = v; localStorage.setItem("tv_chart_id", chartId);
-    toast("Chart ID saved ✓");
-    if (activeSym)
-      document.getElementById("open-tv-btn").href =
-        `https://www.tradingview.com/chart/${chartId}/?symbol=NSE%3A${activeSym}&interval=D`;
-  }
-  modalClose();
-}
 
 // ─── Toast ────────────────────────────────────
 let tt;
