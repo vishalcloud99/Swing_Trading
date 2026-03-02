@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <title>Swing Scanner · NSE</title>
+  <title>Sigma Trading · NSE</title>
   <link
     href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Geist:wght@400;500;600;700&display=swap"
     rel="stylesheet">
@@ -32,7 +32,7 @@
       --border2: #2e3640;
       --text: #e6edf3;
       --text2: #8b949e;
-      --text3: #484f58;
+      --text3: #c9d1d9;
       --accent: #3fb950;
       --accent-bg: rgba(63, 185, 80, .1);
       --accent-bd: rgba(63, 185, 80, .28);
@@ -460,7 +460,13 @@
       color: var(--accent);
     }
 
+    .btn-row {
+      display: flex;
+      gap: 6px;
+    }
+
     #apply-btn {
+      flex: 1;
       padding: 8px;
       background: var(--accent);
       color: #fff;
@@ -485,6 +491,46 @@
     #apply-btn:disabled {
       opacity: .45;
       cursor: not-allowed;
+    }
+
+    #refresh-btn {
+      padding: 8px 10px;
+      background: var(--surface2);
+      color: var(--text2);
+      border: 1px solid var(--border2);
+      border-radius: 6px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .06em;
+      cursor: pointer;
+      transition: all .12s;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      flex-shrink: 0;
+    }
+
+    #refresh-btn:hover {
+      color: var(--text);
+      border-color: var(--accent);
+    }
+
+    #refresh-btn:active {
+      transform: scale(.97);
+    }
+
+    #refresh-btn:disabled {
+      opacity: .45;
+      cursor: not-allowed;
+    }
+
+    #refresh-btn svg {
+      transition: transform .3s var(--ease);
+    }
+
+    #refresh-btn.spinning svg {
+      animation: spin .6s linear infinite;
     }
 
     /* Stocks list */
@@ -1105,6 +1151,27 @@
       /* Meta panel adjustments mobile */
       #meta-panel {
         max-height: none;
+        min-height: 0;
+        overflow: hidden;
+      }
+
+      #meta-dates-scroll {
+        flex: 1;
+        min-height: 0;
+        max-height: 200px;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
+        scrollbar-color: var(--border2) transparent;
+      }
+
+      #meta-dates-scroll::-webkit-scrollbar {
+        width: 3px;
+      }
+
+      #meta-dates-scroll::-webkit-scrollbar-thumb {
+        background: var(--border2);
+        border-radius: 3px;
       }
 
       #meta-tv-btn {
@@ -1127,10 +1194,13 @@
   <!-- Topbar -->
   <div id="topbar">
     <div class="logo">
-      <div class="dot"></div>SCANNER
+      <div class="dot"></div>Sigma Trading
     </div>
     <div class="tb-sep"></div>
     <div id="tb-sym">NSE STOCK SCANNER</div>
+    <div
+      style="margin-left:auto;font-family:var(--font-mono);font-size:7px;color:var(--text3);letter-spacing:.06em;white-space:nowrap;">
+      DEVELOPED BY VISHAL CHAUHAN</div>
     <div class="tb-actions">
       <button class="icon-btn" onclick="toggleTheme()" title="Toggle theme">
         <svg id="ic-moon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1214,7 +1284,16 @@
               <div class="chip on" data-cap="Large Cap">LARGE</div>
             </div>
           </div>
-          <button id="apply-btn">APPLY</button>
+          <div class="btn-row">
+            <button id="apply-btn">APPLY</button>
+            <button id="refresh-btn" title="Force refresh from Google Sheets">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <polyline points="23 4 23 10 17 10" />
+                <polyline points="1 20 1 14 7 14" />
+                <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -1329,6 +1408,9 @@
     let activeStock = null;
     let theme = localStorage.getItem("theme") || "dark";
     let mobileTab = "list";
+    let chartLoadedSym = null;
+    let cachedData = null;   // raw unfiltered data from API
+    let cachedDate = null;   // date for which data is cached
 
     // ─── Boot ────────────────────────────────────
     document.addEventListener("DOMContentLoaded", () => {
@@ -1336,6 +1418,7 @@
       initChips();
       initDate();
       document.getElementById("apply-btn").addEventListener("click", load);
+      document.getElementById("refresh-btn").addEventListener("click", refresh);
       load();
     });
 
@@ -1377,8 +1460,8 @@
       } else if (tab === "chart") {
         chartPanel.classList.add("mob-active");
         btnChart.classList.add("active");
-        // Load chart if stock is selected
-        if (activeSym) loadChart(activeSym);
+        // Only reload chart if a different symbol was selected
+        if (activeSym && activeSym !== chartLoadedSym) loadChart(activeSym);
       } else {
         sidebar.classList.remove("hidden");
         document.getElementById("stocks-panel").style.display = "none";
@@ -1425,28 +1508,80 @@
       return [...document.querySelectorAll(".chip.on")].map(c => c.dataset.cap);
     }
 
-    // ─── Load ────────────────────────────────────
+    // ─── Fetch from API ──────────────────────────
+    async function fetchFromAPI(date) {
+      const p = new URLSearchParams({ action: "getData", date, segment: "All", marketCap: "Micro Cap,Small Cap,Mid Cap,Large Cap" });
+      const res = await fetch(`${API}?${p}`);
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
+    }
+
+    // ─── Local filter ────────────────────────────
+    function filterLocal(data, seg, caps) {
+      return data.filter(s => {
+        const segOk = seg === "All" || s.segment === seg;
+        const capOk = caps.includes(s.marketCap);
+        return segOk && capOk;
+      });
+    }
+
+    // ─── Load (uses cache) ───────────────────────
     async function load() {
       const date = document.getElementById("f-date").value;
       const seg = document.getElementById("f-seg").value;
       const caps = activeCaps();
       if (!caps.length) { renderStocks([]); return; }
-      setLoading(true);
-      const p = new URLSearchParams({ action: "getData", date, segment: seg, marketCap: caps.join(",") });
-      try {
-        const res = await fetch(`${API}?${p}`);
-        const data = await res.json();
-        stocks = Array.isArray(data) ? data : [];
-        renderStocks(stocks);
-        if (activeSym) {
-          const el = document.querySelector(`.srow[data-sym="${activeSym}"]`);
-          if (el) el.classList.add("on");
+
+      // Fetch from API only if date changed or no cache
+      if (!cachedData || cachedDate !== date) {
+        setLoading(true);
+        try {
+          cachedData = await fetchFromAPI(date);
+          cachedDate = date;
+        } catch (e) {
+          renderStocks([]);
+          toast("⚠ Failed to fetch data");
+          setLoading(false);
+          return;
         }
-      } catch (e) {
-        renderStocks([]);
-        toast("⚠ Failed to fetch data");
-      } finally {
         setLoading(false);
+      }
+
+      // Filter locally
+      stocks = filterLocal(cachedData, seg, caps);
+      renderStocks(stocks);
+      if (activeSym) {
+        const el = document.querySelector(`.srow[data-sym="${activeSym}"]`);
+        if (el) el.classList.add("on");
+      }
+    }
+
+    // ─── Refresh (force fetch) ───────────────────
+    async function refresh() {
+      const date = document.getElementById("f-date").value;
+      const btn = document.getElementById("refresh-btn");
+      btn.disabled = true;
+      btn.classList.add("spinning");
+      setLoading(true);
+      try {
+        cachedData = await fetchFromAPI(date);
+        cachedDate = date;
+        toast("✓ Data refreshed");
+      } catch (e) {
+        toast("⚠ Refresh failed");
+      } finally {
+        btn.disabled = false;
+        btn.classList.remove("spinning");
+        setLoading(false);
+      }
+      // Re-apply current filters
+      const seg = document.getElementById("f-seg").value;
+      const caps = activeCaps();
+      stocks = filterLocal(cachedData || [], seg, caps);
+      renderStocks(stocks);
+      if (activeSym) {
+        const el = document.querySelector(`.srow[data-sym="${activeSym}"]`);
+        if (el) el.classList.add("on");
       }
     }
 
@@ -1492,7 +1627,7 @@
       const el = document.querySelector(`.srow[data-sym="${s.symbol}"]`);
       if (el) el.classList.add("on");
 
-      document.getElementById("tb-sym").textContent = `NSE:${s.symbol} · ${s.marketCap} · ${s.segment}`;
+      document.getElementById("tb-sym").textContent = `NSE:${s.symbol}`;
 
       const tvUrl = `https://www.tradingview.com/chart/?symbol=NSE%3A${s.symbol}&interval=D`;
 
@@ -1523,6 +1658,9 @@
 
       // Update toolbar label
       document.getElementById("chart-sym-label").textContent = `BSE:${symbol}`;
+
+      // Track loaded symbol
+      chartLoadedSym = symbol;
 
       // Clear previous widget
       container.innerHTML = "";
