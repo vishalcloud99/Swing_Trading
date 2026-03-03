@@ -4,7 +4,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <title>Sigma Trading · NSE</title>
+  <title>Sigma Trading</title>
+  <link rel="icon" type="image/svg+xml"
+    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230c0e10'/%3E%3Cpolyline points='5,22 12,16 17,19 27,8' fill='none' stroke='%233fb950' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpolyline points='22,8 27,8 27,13' fill='none' stroke='%233fb950' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cline x1='5' y1='26' x2='27' y2='26' stroke='%23252b32' stroke-width='1.5'/%3E%3C/svg%3E" />
   <link
     href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Geist:wght@400;500;600;700&display=swap"
     rel="stylesheet">
@@ -557,9 +559,10 @@
     }
 
     .list-hdr {
-      display: grid;
-      grid-template-columns: 1fr auto auto auto;
-      gap: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 2vw;
       padding: 3px 8px 5px;
       border-bottom: 1px solid var(--border);
       margin-bottom: 3px;
@@ -572,13 +575,36 @@
       letter-spacing: .14em;
       text-transform: uppercase;
       color: var(--text3);
+      cursor: pointer;
+      user-select: none;
+      transition: color .12s;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+    }
+
+    .list-hdr span:hover {
+      color: var(--text);
+    }
+
+    .list-hdr span.sort-active {
+      color: var(--accent);
+    }
+
+    .sort-arrow {
+      font-size: 7px;
+      opacity: .4;
+    }
+
+    .sort-active .sort-arrow {
+      opacity: 1;
     }
 
     .srow {
-      display: grid;
-      grid-template-columns: 1fr auto auto auto;
+      display: flex;
       align-items: center;
-      gap: 8px;
+      justify-content: flex-start;
+      gap: 2vw;
       padding: 8px 8px;
       border-radius: 6px;
       border: 1px solid transparent;
@@ -606,6 +632,9 @@
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+      width: 45%;
+      min-width: 80px;
+      text-align: left;
     }
 
     .srow.on .srow-sym {
@@ -625,8 +654,9 @@
       font-family: var(--font-mono);
       font-size: 10px;
       font-weight: 700;
-      min-width: 50px;
-      text-align: right;
+      width: 20%;
+      min-width: 55px;
+      text-align: center;
     }
 
     .bchg.p {
@@ -644,6 +674,7 @@
       color: var(--text2);
       min-width: 18px;
       text-align: right;
+      margin-left: auto;
     }
 
     .srow.on .bfreq {
@@ -1152,13 +1183,13 @@
       #meta-panel {
         max-height: none;
         min-height: 0;
+        flex: 1;
         overflow: hidden;
       }
 
       #meta-dates-scroll {
         flex: 1;
         min-height: 0;
-        max-height: 200px;
         overflow-y: auto;
         -webkit-overflow-scrolling: touch;
         scrollbar-width: thin;
@@ -1196,8 +1227,8 @@
     <div class="logo">
       <div class="dot"></div>Sigma Trading
     </div>
-    <div class="tb-sep"></div>
-    <div id="tb-sym">NSE STOCK SCANNER</div>
+    <div class="tb-sep" style="display:none"></div>
+    <div id="tb-sym" style="display:none"></div>
     <div
       style="margin-left:auto;font-family:var(--font-mono);font-size:7px;color:var(--text3);letter-spacing:.06em;white-space:nowrap;">
       DEVELOPED BY VISHAL CHAUHAN</div>
@@ -1264,7 +1295,9 @@
           <div class="row2">
             <div class="fg">
               <label class="fl">DATE</label>
-              <input type="date" id="f-date" class="fi" />
+              <input type="text" id="f-date" class="fi" placeholder="DD/MM/YYYY" readonly style="cursor:pointer" />
+              <input type="date" id="f-date-picker"
+                style="position:absolute;opacity:0;width:0;height:0;pointer-events:none" />
             </div>
             <div class="fg">
               <label class="fl">SEGMENT</label>
@@ -1305,7 +1338,10 @@
         </div>
         <div id="stocks-scroll">
           <div class="list-hdr">
-            <span>SYMBOL</span><span>MCAP</span><span>%CHG</span><span>×F</span>
+            <span data-sort="symbol" style="width:45%;min-width:80px">SYMBOL <span
+                class="sort-arrow">▼</span></span><span data-sort="chg"
+              style="width:20%;min-width:55px;justify-content:center">%CHG <span class="sort-arrow">▼</span></span><span
+              data-sort="freq" style="margin-left:auto">×F <span class="sort-arrow">▼</span></span>
           </div>
           <div id="stocks-list"></div>
         </div>
@@ -1411,6 +1447,8 @@
     let chartLoadedSym = null;
     let cachedData = null;   // raw unfiltered data from API
     let cachedDate = null;   // date for which data is cached
+    let sortCol = 'chg';     // current sort column: symbol, chg, freq
+    let sortDir = 'desc';    // asc or desc
 
     // ─── Boot ────────────────────────────────────
     document.addEventListener("DOMContentLoaded", () => {
@@ -1419,6 +1457,7 @@
       initDate();
       document.getElementById("apply-btn").addEventListener("click", load);
       document.getElementById("refresh-btn").addEventListener("click", refresh);
+      initSortHeaders();
       load();
     });
 
@@ -1484,6 +1523,16 @@
       return r;
     }
     function toISO(d) { return d.toISOString().substring(0, 10); }
+    function isoToDMY(iso) {
+      if (!iso) return '';
+      const [y, m, d] = iso.split('-');
+      return `${d}/${m}/${y}`;
+    }
+    function dmyToISO(dmy) {
+      if (!dmy) return '';
+      const [d, m, y] = dmy.split('/');
+      return `${y}-${m}-${d}`;
+    }
     function fmtDate(iso) {
       if (!iso) return "—";
       const [y, m, dd] = iso.split("-");
@@ -1491,9 +1540,16 @@
     }
     function initDate() {
       const iso = toISO(tradingDay(new Date()));
-      document.getElementById("f-date").value = iso;
+      const dateInput = document.getElementById("f-date");
+      const picker = document.getElementById("f-date-picker");
+      dateInput.value = isoToDMY(iso);
       document.getElementById("date-lbl").textContent = fmtDate(iso);
-      document.getElementById("f-date").addEventListener("change", e => {
+      dateInput.addEventListener("click", () => {
+        picker.value = dmyToISO(dateInput.value);
+        picker.showPicker ? picker.showPicker() : picker.click();
+      });
+      picker.addEventListener("change", e => {
+        dateInput.value = isoToDMY(e.target.value);
         document.getElementById("date-lbl").textContent = fmtDate(e.target.value);
       });
     }
@@ -1527,7 +1583,7 @@
 
     // ─── Load (uses cache) ───────────────────────
     async function load() {
-      const date = document.getElementById("f-date").value;
+      const date = dmyToISO(document.getElementById("f-date").value);
       const seg = document.getElementById("f-seg").value;
       const caps = activeCaps();
       if (!caps.length) { renderStocks([]); return; }
@@ -1558,7 +1614,7 @@
 
     // ─── Refresh (force fetch) ───────────────────
     async function refresh() {
-      const date = document.getElementById("f-date").value;
+      const date = dmyToISO(document.getElementById("f-date").value);
       const btn = document.getElementById("refresh-btn");
       btn.disabled = true;
       btn.classList.add("spinning");
@@ -1585,8 +1641,62 @@
       }
     }
 
+    // ─── Sorting ─────────────────────────────────
+    function initSortHeaders() {
+      document.querySelectorAll('.list-hdr span[data-sort]').forEach(hdr => {
+        hdr.addEventListener('click', () => {
+          const col = hdr.dataset.sort;
+          if (sortCol === col) {
+            sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+          } else {
+            sortCol = col;
+            sortDir = 'desc';
+          }
+          updateSortUI();
+          renderStocks(stocks);
+        });
+      });
+      updateSortUI();
+    }
+
+    function updateSortUI() {
+      document.querySelectorAll('.list-hdr span[data-sort]').forEach(hdr => {
+        const arrow = hdr.querySelector('.sort-arrow');
+        if (hdr.dataset.sort === sortCol) {
+          hdr.classList.add('sort-active');
+          arrow.textContent = sortDir === 'asc' ? '▲' : '▼';
+        } else {
+          hdr.classList.remove('sort-active');
+          arrow.textContent = '▼';
+        }
+      });
+    }
+
+    function sortStocks(list) {
+      const sorted = [...list];
+      const dir = sortDir === 'asc' ? 1 : -1;
+      sorted.sort((a, b) => {
+        if (sortCol === 'symbol') {
+          return dir * a.symbol.localeCompare(b.symbol);
+        } else if (sortCol === 'chg') {
+          const aChg = getLatestChg(a);
+          const bChg = getLatestChg(b);
+          return dir * (aChg - bChg);
+        } else {
+          return dir * (a.frequency - b.frequency);
+        }
+      });
+      return sorted;
+    }
+
+    function getLatestChg(s) {
+      const sorted = s.dates ? [...s.dates].sort((a, b) => b.date.localeCompare(a.date)) : [];
+      return sorted.length ? parseFloat(sorted[0].pctChg || 0) : 0;
+    }
+
     // ─── Render list ─────────────────────────────
     function renderStocks(list) {
+      list = sortStocks(list);
       const el = document.getElementById("stocks-list");
       const cnt = document.getElementById("s-count");
       const badge = document.getElementById("bnav-badge");
@@ -1607,13 +1717,11 @@
         const r = document.createElement("div");
         r.className = "srow" + (s.symbol === activeSym ? " on" : "");
         r.dataset.sym = s.symbol;
-        const capMap = { "Large Cap": "LARGE", "Mid Cap": "MID", "Small Cap": "SMALL", "Micro Cap": "MICRO" };
-        const capLabel = capMap[s.marketCap] || s.marketCap || "—";
         const sorted = s.dates ? [...s.dates].sort((a, b) => b.date.localeCompare(a.date)) : [];
         const latestChg = sorted.length ? parseFloat(sorted[0].pctChg || 0) : 0;
         const chgCls = latestChg >= 0 ? "p" : "n";
         const chgLbl = latestChg >= 0 ? `▲${latestChg.toFixed(1)}%` : `▼${Math.abs(latestChg).toFixed(1)}%`;
-        r.innerHTML = `<span class="srow-sym">${s.symbol}</span><span class="bseg">${capLabel}</span><span class="bchg ${chgCls}">${chgLbl}</span><span class="bfreq">${s.frequency}</span>`;
+        r.innerHTML = `<span class="srow-sym">${s.symbol}</span><span class="bchg ${chgCls}">${chgLbl}</span><span class="bfreq">${s.frequency}</span>`;
         r.addEventListener("click", () => pick(s));
         el.appendChild(r);
       });
@@ -1627,7 +1735,6 @@
       const el = document.querySelector(`.srow[data-sym="${s.symbol}"]`);
       if (el) el.classList.add("on");
 
-      document.getElementById("tb-sym").textContent = `NSE:${s.symbol}`;
 
       const tvUrl = `https://www.tradingview.com/chart/?symbol=NSE%3A${s.symbol}&interval=D`;
 
